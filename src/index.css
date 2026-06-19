@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "PingFang SC", "Source Han Sans CN", "Microsoft YaHei",
+    -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #252a32;
+  background-color: #f7f8f9;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 select-none;
+  }
+  .btn-primary {
+    @apply btn bg-primary-800 text-white hover:bg-primary-700 active:bg-primary-900 shadow-card;
+  }
+  .btn-accent {
+    @apply btn bg-accent-500 text-white hover:bg-accent-600 active:bg-accent-700 shadow-card;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-primary-800 hover:bg-primary-50;
+  }
+  .btn-outline {
+    @apply btn bg-white text-primary-800 border border-primary-200 hover:bg-primary-50 hover:border-primary-300;
+  }
+  .btn-warning {
+    @apply btn bg-warning-500 text-primary-900 hover:bg-warning-400;
+  }
+  .btn-danger {
+    @apply btn bg-danger-500 text-white hover:bg-danger-600;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-lg {
+    @apply px-6 py-2.5 text-base;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-card border border-ink-100;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 text-sm bg-white border border-ink-200 rounded-md outline-none transition-colors placeholder:text-ink-400 focus:border-accent-400 focus:ring-2 focus:ring-accent-100;
+  }
+  .textarea {
+    @apply input resize-y min-h-[80px];
+  }
+
+  .label {
+    @apply block text-xs font-medium text-ink-600 mb-1.5;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .tab {
+    @apply px-4 py-2.5 text-sm font-medium text-ink-500 border-b-2 border-transparent transition-colors cursor-pointer hover:text-primary-700;
+  }
+  .tab-active {
+    @apply tab text-accent-600 border-accent-500;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #b7bfc8 transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #b7bfc8;
+    border-radius: 3px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: #8b96a4;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    overflow: visible !important;
+  }
+}

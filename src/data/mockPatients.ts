@@ -1,0 +1,167 @@
+import { Patient, SectionKey, SECTION_LABEL } from '@/types';
+
+const createEmptySection = (key: SectionKey) => ({
+  key,
+  label: SECTION_LABEL[key],
+  images: [],
+  annotations: [],
+});
+
+export const MOCK_PATIENTS: Patient[] = [
+  {
+    id: 'p-001',
+    name: '张建国',
+    gender: 'male',
+    age: 67,
+    caseType: 'implant-full',
+    status: 'in-progress',
+    updatedAt: '2026-06-18 14:32',
+    sections: {
+      'centric-relation': {
+        key: 'centric-relation',
+        label: SECTION_LABEL['centric-relation'],
+        images: [
+          {
+            id: 'img-1',
+            url: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=close%20up%20dental%20occlusion%20intraoral%20photograph%20showing%20upper%20and%20lower%20teeth%20articulation%20with%20blue%20articulating%20paper%20marks%20clinical%20photography%20neutral%20lighting&image_size=square_hd',
+            name: '口内咬合正面照.jpg',
+          },
+          {
+            id: 'img-2',
+            url: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=dental%20study%20model%20cast%20articulator%20showing%20centric%20occlusion%20relation%20laboratory%20photography&image_size=square_hd',
+            name: '石膏模型正中关系.jpg',
+          },
+        ],
+        annotations: [
+          {
+            id: 'a-1',
+            type: 'early-contact',
+            imageId: 'img-1',
+            x: 48,
+            y: 55,
+            note: '左侧上颌第一磨牙区可见蓝黑色浓密咬合纸印记，闭合时首先接触',
+            orderNum: 1,
+          },
+          {
+            id: 'a-2',
+            type: 'occlusal-interference',
+            imageId: 'img-1',
+            x: 62,
+            y: 42,
+            note: '前伸运动时右上颌尖牙有明显干扰痕迹',
+            orderNum: 2,
+          },
+        ],
+      },
+      'vertical-dimension': {
+        key: 'vertical-dimension',
+        label: SECTION_LABEL['vertical-dimension'],
+        images: [
+          {
+            id: 'img-3',
+            url: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=elderly%20patient%20facial%20profile%20photograph%20side%20view%20showing%20vertical%20dimension%20of%20lower%20face%20clinical%20dental%20photography&image_size=portrait_4_3',
+            name: '面部侧面照.jpg',
+          },
+        ],
+        annotations: [
+          {
+            id: 'a-3',
+            type: 'jaw-instability',
+            imageId: 'img-3',
+            x: 50,
+            y: 68,
+            note: '面下1/3高度明显缩短，鼻唇沟加深，息止颌间隙约8mm，垂直距离减低',
+            orderNum: 1,
+          },
+        ],
+      },
+      'overjet-overbite': createEmptySection('overjet-overbite'),
+      deviation: createEmptySection('deviation'),
+    },
+  },
+  {
+    id: 'p-002',
+    name: '李秀兰',
+    gender: 'female',
+    age: 72,
+    caseType: 'removable-denture',
+    status: 'completed',
+    updatedAt: '2026-06-15 10:15',
+    sections: {
+      'centric-relation': {
+        key: 'centric-relation',
+        label: SECTION_LABEL['centric-relation'],
+        images: [
+          {
+            id: 'img-4',
+            url: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=complete%20denture%20wax%20occlusal%20rim%20record%20dental%20laboratory%20photography&image_size=square_hd',
+            name: '蜡堤记录.jpg',
+          },
+        ],
+        annotations: [
+          {
+            id: 'a-4',
+            type: 'early-contact',
+            imageId: 'img-4',
+            x: 35,
+            y: 50,
+            note: '蜡堤左侧后牙区可见明显压痕',
+            orderNum: 1,
+          },
+        ],
+      },
+      'vertical-dimension': createEmptySection('vertical-dimension'),
+      'overjet-overbite': createEmptySection('overjet-overbite'),
+      deviation: {
+        key: 'deviation',
+        label: SECTION_LABEL.deviation,
+        images: [
+          {
+            id: 'img-5',
+            url: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=dental%20midline%20comparison%20photograph%20frontal%20view%20upper%20and%20lower%20dental%20arch%20deviation%20clinical&image_size=square_hd',
+            name: '中线对比正面照.jpg',
+          },
+        ],
+        annotations: [
+          {
+            id: 'a-5',
+            type: 'midline-deviation',
+            imageId: 'img-5', x: 52, y: 50,
+            note: '下颌中线相对于上颌中线偏左约2mm',
+            orderNum: 1,
+          },
+        ],
+      },
+    },
+  },
+  {
+    id: 'p-003',
+    name: '王德福',
+    gender: 'male',
+    age: 58,
+    caseType: 'severe-wear',
+    status: 'draft',
+    updatedAt: '2026-06-10 16:48',
+    sections: {
+      'centric-relation': createEmptySection('centric-relation'),
+      'vertical-dimension': createEmptySection('vertical-dimension'),
+      'overjet-overbite': createEmptySection('overjet-overbite'),
+      deviation: createEmptySection('deviation'),
+    },
+  },
+  {
+    id: 'p-004',
+    name: '赵美华',
+    gender: 'female',
+    age: 63,
+    caseType: 'implant-full',
+    status: 'draft',
+    updatedAt: '2026-06-08 09:20',
+    sections: {
+      'centric-relation': createEmptySection('centric-relation'),
+      'vertical-dimension': createEmptySection('vertical-dimension'),
+      'overjet-overbite': createEmptySection('overjet-overbite'),
+      deviation: createEmptySection('deviation'),
+    },
+  },
+];
