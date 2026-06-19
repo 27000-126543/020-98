@@ -3,12 +3,19 @@ import {
   AlertTriangle,
   ShieldAlert,
   FileCheck,
+  ChevronDown,
 } from 'lucide-react';
-import { AssessmentConclusion, CONCLUSION_STATUS_LABEL } from '@/types';
+import { useState } from 'react';
+import {
+  AssessmentConclusion,
+  CONCLUSION_STATUS_LABEL,
+  ConclusionStatus,
+} from '@/types';
 import { cn } from '@/lib/utils';
 
 interface Props {
   conclusion: AssessmentConclusion;
+  onStatusChange?: (status: ConclusionStatus) => void;
 }
 
 const STATUS_CONFIG = {
@@ -38,7 +45,14 @@ const STATUS_CONFIG = {
   },
 };
 
-export const ConclusionCard = ({ conclusion }: Props) => {
+const ALL_STATUSES: ConclusionStatus[] = [
+  'ready-for-design',
+  'review-required',
+  'adjustment-recommended',
+];
+
+export const ConclusionCard = ({ conclusion, onStatusChange }: Props) => {
+  const [showDropdown, setShowDropdown] = useState(false);
   const cfg = STATUS_CONFIG[conclusion.status];
   const Icon = cfg.icon;
 
@@ -54,14 +68,66 @@ export const ConclusionCard = ({ conclusion }: Props) => {
           <Icon className="w-7 h-7 text-white" />
         </div>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h2 className={cn('text-xl font-bold', cfg.text)}>
-              {CONCLUSION_STATUS_LABEL[conclusion.status]}
-            </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            {onStatusChange ? (
+              <div className="relative">
+                <button
+                  onClick={() => setShowDropdown((v) => !v)}
+                  className={cn(
+                    'text-xl font-bold flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-white/40 transition-colors',
+                    cfg.text,
+                  )}
+                >
+                  {CONCLUSION_STATUS_LABEL[conclusion.status]}
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {showDropdown && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowDropdown(false)}
+                    />
+                    <div className="absolute left-0 top-full mt-1 z-20 bg-white rounded-lg shadow-card border border-ink-100 py-1 min-w-[160px]">
+                      {ALL_STATUSES.map((status) => {
+                        const sCfg = STATUS_CONFIG[status];
+                        const SIcon = sCfg.icon;
+                        return (
+                          <button
+                            key={status}
+                            onClick={() => {
+                              onStatusChange(status);
+                              setShowDropdown(false);
+                            }}
+                            className={cn(
+                              'w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-ink-50 transition-colors',
+                              status === conclusion.status
+                                ? sCfg.text + ' font-medium'
+                                : 'text-ink-700',
+                            )}
+                          >
+                            <SIcon className="w-4 h-4" />
+                            {CONCLUSION_STATUS_LABEL[status]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <h2 className={cn('text-xl font-bold', cfg.text)}>
+                {CONCLUSION_STATUS_LABEL[conclusion.status]}
+              </h2>
+            )}
             <span className="badge bg-white/60 text-ink-600">
               <FileCheck className="w-3 h-3 mr-1" />
               生成于 {conclusion.generatedAt}
             </span>
+            {onStatusChange && (
+              <span className="text-xs text-ink-500">
+                （点击结论可修改）
+              </span>
+            )}
           </div>
           <ul className="mt-3 space-y-1.5">
             {conclusion.summary.map((s, i) => (

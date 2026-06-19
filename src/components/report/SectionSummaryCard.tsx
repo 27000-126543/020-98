@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Ruler } from 'lucide-react';
 import {
   SectionKey,
   SECTION_LABEL,
@@ -63,15 +63,37 @@ export const SectionSummaryCard = ({ summaries }: Props) => {
                 {risk.label}
               </span>
             </div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="text-2xl font-bold font-mono text-ink-800">
-                {s.annotationCount}
+            <div className="flex items-center gap-6 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="text-2xl font-bold font-mono text-ink-800">
+                  {s.annotationCount}
+                </div>
+                <div className="text-xs text-ink-500 leading-tight">
+                  处标注
+                </div>
               </div>
-              <div className="text-xs text-ink-500 leading-tight">
-                处标注
-                <br />
-                {s.annotationCount > 0 ? '需关注' : '状态良好'}
-              </div>
+              {s.measurementCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-md bg-primary-100 flex items-center justify-center">
+                    <Ruler className="w-4 h-4 text-primary-600" />
+                  </div>
+                  <div className="text-xs text-ink-500 leading-tight">
+                    <div className="font-semibold text-primary-700">
+                      {s.measurementCount} 项测量
+                    </div>
+                    {s.measurementSummary.totalDistanceMm > 0 && (
+                      <div className="font-mono text-primary-600">
+                        共 {s.measurementSummary.totalDistanceMm.toFixed(1)} mm
+                      </div>
+                    )}
+                    {s.measurementSummary.deviations.length > 0 && (
+                      <div className="text-danger-600">
+                        检出 {s.measurementSummary.deviations.length} 处偏移
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <ul className="space-y-1 pt-3 border-t border-ink-100">
               {s.keyFindings.map((f, i) => (

@@ -10,11 +10,15 @@ export type AnnotationType =
   | 'occlusal-interference'
   | 'midline-deviation'
   | 'jaw-instability';
+export type MeasurementType = 'distance' | 'reference-line';
+export type MeasurementDirection = 'horizontal' | 'vertical' | 'left' | 'right' | 'none';
 export type ConclusionStatus =
   | 'review-required'
   | 'ready-for-design'
   | 'adjustment-recommended';
 export type RiskLevel = 'normal' | 'mild' | 'moderate' | 'severe';
+
+export const MEASUREMENT_ENABLED_SECTIONS = ['overjet-overbite', 'deviation'] as const;
 
 export const CASE_TYPE_LABEL: Record<CaseType, string> = {
   'implant-full': '种植全口',
@@ -85,11 +89,27 @@ export interface Annotation {
   orderNum: number;
 }
 
+export interface Measurement {
+  id: string;
+  type: MeasurementType;
+  imageId: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  label: string;
+  valueMm: number;
+  direction: MeasurementDirection;
+  note: string;
+  orderNum: number;
+}
+
 export interface AssessmentSection {
   key: SectionKey;
   label: string;
   images: SectionImage[];
   annotations: Annotation[];
+  measurements: Measurement[];
 }
 
 export interface Patient {
@@ -101,12 +121,29 @@ export interface Patient {
   status: AssessmentStatus;
   updatedAt: string;
   sections: Record<SectionKey, AssessmentSection>;
+  savedConclusion: SavedConclusion | null;
+}
+
+export interface SavedConclusion {
+  status: ConclusionStatus;
+  summary: string[];
+  sectionSummaries: Record<SectionKey, SectionSummary>;
+  patientExplanation: string;
+  savedAt: string;
+  generatedAt: string;
 }
 
 export interface SectionSummary {
   annotationCount: number;
   keyFindings: string[];
   riskLevel: RiskLevel;
+  measurementCount: number;
+  measurementSummary: {
+    totalDistanceMm: number;
+    hasHorizontalDeviation: boolean;
+    hasVerticalDeviation: boolean;
+    deviations: Array<{ label: string; valueMm: number; direction: string }>;
+  };
 }
 
 export interface AssessmentConclusion {

@@ -30,26 +30,88 @@ const getAnnotationRisk = (type: AnnotationType): number => {
 };
 
 const calcRiskLevel = (section: AssessmentSection): RiskLevel => {
-  if (section.annotations.length === 0) return 'normal';
+  if (section.annotations.length === 0 && section.measurements.length === 0) return 'normal';
   const totalRisk = section.annotations.reduce(
     (sum, a) => sum + getAnnotationRisk(a.type),
     0,
   );
-  if (totalRisk >= 5 || section.annotations.length >= 4) return 'severe';
-  if (totalRisk >= 3 || section.annotations.length >= 2) return 'moderate';
+  const hasSignificantMeasurement = section.measurements.some(
+    (m) => m.type === 'distance' && m.valueMm >= 2,
+  );
+  const hasDeviation = section.measurements.some(
+    (m) => m.direction === 'left' || m.direction === 'right',
+  );
+  if (
+    totalRisk >= 5 ||
+    section.annotations.length >= 4 ||
+    (hasSignificantMeasurement && hasDeviation)
+  )
+    return 'severe';
+  if (totalRisk >= 3 || section.annotations.length >= 2 || hasSignificantMeasurement)
+    return 'moderate';
+  if (section.measurements.length > 0) return 'mild';
   return 'mild';
 };
 
 const buildKeyFindings = (section: AssessmentSection): string[] => {
-  if (section.annotations.length === 0) return ['未见明显异常'];
-  const countByType: Record<string, number> = {};
-  section.annotations.forEach((a) => {
-    countByType[a.type] = (countByType[a.type] || 0) + 1;
+  const findings: string[] = [];
+  if (section.annotations.length === 0 && section.measurements.length === 0) {
+    return ['未见明显异常'];
+  }
+  if (section.annotations.length > 0) {
+    const countByType: Record<string, number> = {};
+    section.annotations.forEach((a) => {
+      countByType[a.type] = (countByType[a.type] || 0) + 1;
+    });
+    Object.entries(countByType).forEach(([type, count]) => {
+      findings.push(`${ANNOTATION_TYPE_LABEL[type as AnnotationType]} × ${count}处`);
+    });
+  }
+  section.measurements.forEach((m) => {
+    if (m.type === 'distance' && m.valueMm > 0) {
+      const dirText =
+        m.direction === 'left'
+          ? '（偏左）'
+          : m.direction === 'right'
+            ? '（偏右）'
+            : m.direction === 'horizontal'
+              ? '（水平）'
+              : m.direction === 'vertical'
+                ? '（垂直）'
+                : '';
+      findings.push(`${m.label}：${m.valueMm.toFixed(1)}mm ${dirText}`);
+    } else if (m.type === 'reference-line') {
+      findings.push(`${m.label}：参考线已绘制`);
+    }
   });
-  return Object.entries(countByType).map(
-    ([type, count]) =>
-      `${ANNOTATION_TYPE_LABEL[type as AnnotationType]} × ${count}处`,
+  return findings;
+};
+
+const buildMeasurementSummary = (section: AssessmentSection) => {
+  const distanceMeasurements = section.measurements.filter(
+    (m) => m.type === 'distance',
   );
+  const totalDistanceMm = distanceMeasurements.reduce(
+    (sum, m) => sum + m.valueMm,
+    0,
+  );
+  const deviations = distanceMeasurements
+    .filter((m) => m.direction === 'left' || m.direction === 'right')
+    .map((m) => ({
+      label: m.label,
+      valueMm: m.valueMm,
+      direction: m.direction,
+    }));
+  return {
+    totalDistanceMm,
+    hasHorizontalDeviation: section.measurements.some(
+      (m) => m.direction === 'horizontal',
+    ),
+    hasVerticalDeviation: section.measurements.some(
+      (m) => m.direction === 'vertical',
+    ),
+    deviations,
+  };
 };
 
 const buildSectionSummaries = (
@@ -62,6 +124,8 @@ const buildSectionSummaries = (
       annotationCount: section.annotations.length,
       keyFindings: buildKeyFindings(section),
       riskLevel: calcRiskLevel(section),
+      measurementCount: section.measurements.length,
+      measurementSummary: buildMeasurementSummary(section),
     };
   });
   return result;
@@ -113,9 +177,11 @@ const buildSummary = (
   const items: string[] = [];
   SECTION_ORDER.forEach((key) => {
     const s = summaries[key];
-    if (s.annotationCount > 0) {
+    if (s.annotationCount > 0 || s.measurementCount > 0) {
+      const measurementText =
+        s.measurementCount > 0 ? `（含${s.measurementCount}项测量）` : '';
       items.push(
-        `【${SECTION_LABEL[key]}】${s.keyFindings.join('，')}`,
+        `【${SECTION_LABEL[key]}${measurementText}】${s.keyFindings.join('，')}`,
       );
     }
   });
@@ -153,13 +219,23 @@ const buildPatientExplanation = (
   }
 
   const abnormalSections = SECTION_ORDER.filter(
-    (k) => summaries[k].annotationCount > 0,
+    (k) => summaries[k].annotationCount > 0 || summaries[k].measurementCount > 0,
   )
     .map((k) => SECTION_LABEL[k])
     .join('、');
 
+  const totalMeasurements = SECTION_ORDER.reduce(
+    (sum, k) => sum + summaries[k].measurementCount,
+    0,
+  );
+
+  const measurementText =
+    totalMeasurements > 0
+      ? `，其中包含 ${totalMeasurements} 项量化测量数据`
+      : '';
+
   const detail = abnormalSections
-    ? `本次重点关注的评估区域包括：${abnormalSections}。`
+    ? `本次重点关注的评估区域包括：${abnormalSections}${measurementText}。`
     : '各项分区评估均未发现明显异常。';
 
   return `${greeting}：\n\n感谢您选择本诊所进行修复治疗。根据本次初诊的咬合评估结果，${detail}\n\n${suggestion}\n\n如有疑问，请随时与您的主治医师沟通。\n\n——口腔修复科`;

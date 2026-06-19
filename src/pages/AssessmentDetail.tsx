@@ -15,6 +15,8 @@ import {
   CASE_TYPE_LABEL,
   SECTION_ORDER,
   SectionKey,
+  Measurement,
+  MEASUREMENT_ENABLED_SECTIONS,
 } from '@/types';
 import { SectionTabs } from '@/components/assessment/SectionTabs';
 import { ThumbnailList } from '@/components/assessment/ThumbnailList';
@@ -36,6 +38,12 @@ export const AssessmentDetail = () => {
   const clearSectionAnnotations = usePatientStore(
     (s) => s.clearSectionAnnotations,
   );
+  const addMeasurement = usePatientStore((s) => s.addMeasurement);
+  const updateMeasurement = usePatientStore((s) => s.updateMeasurement);
+  const removeMeasurement = usePatientStore((s) => s.removeMeasurement);
+  const clearSectionMeasurements = usePatientStore(
+    (s) => s.clearSectionMeasurements,
+  );
   const touchPatient = usePatientStore((s) => s.touchPatient);
   const updatePatientStatus = usePatientStore((s) => s.updatePatientStatus);
   const showToast = useUIStore((s) => s.showToast);
@@ -43,9 +51,9 @@ export const AssessmentDetail = () => {
 
   const [sectionKey, setSectionKey] = useState<SectionKey>('centric-relation');
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
-  const [activeTool, setActiveTool] = useState<AnnotationType | 'pan' | null>(
-    null,
-  );
+  const [activeTool, setActiveTool] = useState<
+    AnnotationType | 'pan' | 'measure-distance' | 'measure-line' | null
+  >(null);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(
     null,
   );
@@ -138,11 +146,36 @@ export const AssessmentDetail = () => {
     if (!activeImage || !activeTool || activeTool === 'pan') return;
     const a = addAnnotation(patient.id, sectionKey, {
       imageId: activeImage.id,
-      type: activeTool,
+      type: activeTool as AnnotationType,
       x,
       y,
     });
     setSelectedAnnotationId(a.id);
+  };
+
+  const handleAddMeasurement = (data: {
+    type: Measurement['type'];
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  }) => {
+    if (!activeImage) return;
+    const defaultLabel = data.type === 'distance' ? '距离测量' : '参考线';
+    const m = addMeasurement(patient.id, sectionKey, {
+      imageId: activeImage.id,
+      type: data.type,
+      x1: data.x1,
+      y1: data.y1,
+      x2: data.x2,
+      y2: data.y2,
+      label: defaultLabel,
+      valueMm: 0,
+      direction: 'none',
+      note: '',
+    });
+    setSelectedAnnotationId(m.id);
+    showToast('success', '测量已添加，可在右侧面板编辑毫米数和方向');
   };
 
   const handleSave = () => {
@@ -242,13 +275,16 @@ export const AssessmentDetail = () => {
           <AnnotationToolbar
             activeTool={activeTool}
             onChange={setActiveTool}
+            sectionKey={sectionKey}
           />
           {currentSection && (
             <ImageAnnotator
               image={activeImage}
               annotations={currentSection.annotations}
+              measurements={currentSection.measurements}
               activeTool={activeTool}
               onAddAnnotation={handleAddAnnotation}
+              onAddMeasurement={handleAddMeasurement}
               onSelectAnnotation={setSelectedAnnotationId}
               selectedAnnotationId={selectedAnnotationId}
             />
@@ -259,6 +295,16 @@ export const AssessmentDetail = () => {
               {activeTool ? (
                 activeTool === 'pan' ? (
                   <span>当前：平移视图 · 点击图像区域拖拽移动</span>
+                ) : activeTool === 'measure-distance' ? (
+                  <span>
+                    当前工具：<span className="font-medium text-primary-600">距离测量</span>
+                    {'  ·  在图像上点击两点完成测量（按 Esc 取消）'}
+                  </span>
+                ) : activeTool === 'measure-line' ? (
+                  <span>
+                    当前工具：<span className="font-medium text-primary-600">参考线</span>
+                    {'  ·  在图像上点击两点绘制参考线（按 Esc 取消）'}
+                  </span>
                 ) : (
                   <span>
                     当前标注工具：
@@ -275,6 +321,7 @@ export const AssessmentDetail = () => {
               ) : (
                 <span>
                   快捷键：1-4 切换标注工具 · 空格 平移 · Esc 取消选择
+                  {(MEASUREMENT_ENABLED_SECTIONS as readonly string[]).includes(sectionKey) && ' · 测量工具见右侧工具栏'}
                 </span>
               )}
             </div>
@@ -301,6 +348,7 @@ export const AssessmentDetail = () => {
           <AnnotationPanel
             sectionKey={sectionKey}
             annotations={currentSection.annotations}
+            measurements={currentSection.measurements}
             selectedId={selectedAnnotationId}
             onSelect={setSelectedAnnotationId}
             onUpdateNote={(id, note) =>
@@ -313,6 +361,16 @@ export const AssessmentDetail = () => {
             onClearAll={() => {
               clearSectionAnnotations(patient.id, sectionKey);
               setSelectedAnnotationId(null);
+            }}
+            onUpdateMeasurement={(id, data) =>
+              updateMeasurement(patient.id, sectionKey, id, data)
+            }
+            onRemoveMeasurement={(id) => {
+              removeMeasurement(patient.id, sectionKey, id);
+              if (selectedAnnotationId === id) setSelectedAnnotationId(null);
+            }}
+            onClearMeasurements={() => {
+              clearSectionMeasurements(patient.id, sectionKey);
             }}
           />
         )}

@@ -5,6 +5,7 @@ const createEmptySection = (key: SectionKey) => ({
   label: SECTION_LABEL[key],
   images: [],
   annotations: [],
+  measurements: [],
 });
 
 export const MOCK_PATIENTS: Patient[] = [
@@ -16,6 +17,7 @@ export const MOCK_PATIENTS: Patient[] = [
     caseType: 'implant-full',
     status: 'in-progress',
     updatedAt: '2026-06-18 14:32',
+    savedConclusion: null,
     sections: {
       'centric-relation': {
         key: 'centric-relation',
@@ -52,6 +54,7 @@ export const MOCK_PATIENTS: Patient[] = [
             orderNum: 2,
           },
         ],
+        measurements: [],
       },
       'vertical-dimension': {
         key: 'vertical-dimension',
@@ -74,8 +77,34 @@ export const MOCK_PATIENTS: Patient[] = [
             orderNum: 1,
           },
         ],
+        measurements: [],
       },
-      'overjet-overbite': createEmptySection('overjet-overbite'),
+      'overjet-overbite': {
+        ...createEmptySection('overjet-overbite'),
+        images: [
+          {
+            id: 'img-6',
+            url: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=dental%20lateral%20occlusion%20view%20showing%20overjet%20and%20overbite%20measurement%20clinical%20intraoral%20photograph&image_size=square_hd',
+            name: '侧面咬合照.jpg',
+          },
+        ],
+        measurements: [
+          {
+            id: 'm-1',
+            type: 'distance',
+            imageId: 'img-6',
+            x1: 38,
+            y1: 45,
+            x2: 58,
+            y2: 45,
+            label: '水平覆盖',
+            valueMm: 3.5,
+            direction: 'horizontal',
+            note: '上下前牙水平距离约3.5mm，在正常范围内',
+            orderNum: 1,
+          },
+        ],
+      },
       deviation: createEmptySection('deviation'),
     },
   },
@@ -87,6 +116,7 @@ export const MOCK_PATIENTS: Patient[] = [
     caseType: 'removable-denture',
     status: 'completed',
     updatedAt: '2026-06-15 10:15',
+    savedConclusion: null,
     sections: {
       'centric-relation': {
         key: 'centric-relation',
@@ -109,6 +139,7 @@ export const MOCK_PATIENTS: Patient[] = [
             orderNum: 1,
           },
         ],
+        measurements: [],
       },
       'vertical-dimension': createEmptySection('vertical-dimension'),
       'overjet-overbite': createEmptySection('overjet-overbite'),
@@ -126,9 +157,41 @@ export const MOCK_PATIENTS: Patient[] = [
           {
             id: 'a-5',
             type: 'midline-deviation',
-            imageId: 'img-5', x: 52, y: 50,
+            imageId: 'img-5',
+            x: 52,
+            y: 50,
             note: '下颌中线相对于上颌中线偏左约2mm',
             orderNum: 1,
+          },
+        ],
+        measurements: [
+          {
+            id: 'm-2',
+            type: 'distance',
+            imageId: 'img-5',
+            x1: 50,
+            y1: 30,
+            x2: 52,
+            y2: 70,
+            label: '上颌中线参考',
+            valueMm: 0,
+            direction: 'vertical',
+            note: '上颌中线与面中线基本一致',
+            orderNum: 1,
+          },
+          {
+            id: 'm-3',
+            type: 'distance',
+            imageId: 'img-5',
+            x1: 48,
+            y1: 30,
+            x2: 48,
+            y2: 70,
+            label: '下颌中线',
+            valueMm: 2,
+            direction: 'left',
+            note: '下颌中线偏左约2mm',
+            orderNum: 2,
           },
         ],
       },
@@ -142,6 +205,7 @@ export const MOCK_PATIENTS: Patient[] = [
     caseType: 'severe-wear',
     status: 'draft',
     updatedAt: '2026-06-10 16:48',
+    savedConclusion: null,
     sections: {
       'centric-relation': createEmptySection('centric-relation'),
       'vertical-dimension': createEmptySection('vertical-dimension'),
@@ -157,6 +221,7 @@ export const MOCK_PATIENTS: Patient[] = [
     caseType: 'implant-full',
     status: 'draft',
     updatedAt: '2026-06-08 09:20',
+    savedConclusion: null,
     sections: {
       'centric-relation': createEmptySection('centric-relation'),
       'vertical-dimension': createEmptySection('vertical-dimension'),

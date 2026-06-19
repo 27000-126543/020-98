@@ -9,6 +9,10 @@ import {
   SectionKey,
   SECTION_LABEL,
   AssessmentStatus,
+  Measurement,
+  MeasurementDirection,
+  MeasurementType,
+  SavedConclusion,
 } from '@/types';
 import { MOCK_PATIENTS } from '@/data/mockPatients';
 import { clampPercent, formatDate, uid } from '@/utils/annotation';
@@ -20,6 +24,7 @@ const createEmptySection = (key: SectionKey): AssessmentSection => ({
   label: SECTION_LABEL[key],
   images: [],
   annotations: [],
+  measurements: [],
 });
 
 const loadFromStorage = (): Patient[] => {
@@ -40,6 +45,13 @@ interface PatientState {
     gender: 'male' | 'female';
     age: number;
     caseType: CaseType;
+  }) => Patient;
+  importPatientWithImages: (data: {
+    name: string;
+    gender: 'male' | 'female';
+    age: number;
+    caseType: CaseType;
+    sectionImages: Partial<Record<SectionKey, Array<{ url: string; name: string }>>>;
   }) => Patient;
   removePatient: (id: string) => void;
   updatePatientStatus: (id: string, status: AssessmentStatus) => void;
@@ -79,6 +91,41 @@ interface PatientState {
     patientId: string,
     sectionKey: SectionKey,
   ) => void;
+  addMeasurement: (
+    patientId: string,
+    sectionKey: SectionKey,
+    data: {
+      imageId: string;
+      type: MeasurementType;
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      label: string;
+      valueMm: number;
+      direction: MeasurementDirection;
+      note?: string;
+    },
+  ) => Measurement;
+  updateMeasurement: (
+    patientId: string,
+    sectionKey: SectionKey,
+    measurementId: string,
+    patch: Partial<
+      Pick<Measurement, 'label' | 'valueMm' | 'direction' | 'note' | 'x1' | 'y1' | 'x2' | 'y2'>
+    >,
+  ) => void;
+  removeMeasurement: (
+    patientId: string,
+    sectionKey: SectionKey,
+    measurementId: string,
+  ) => void;
+  clearSectionMeasurements: (
+    patientId: string,
+    sectionKey: SectionKey,
+  ) => void;
+  saveConclusion: (patientId: string, conclusion: SavedConclusion) => void;
+  clearSavedConclusion: (patientId: string) => void;
   touchPatient: (id: string) => void;
 }
 
@@ -102,7 +149,46 @@ export const usePatientStore = create<PatientState>((set, get) => ({
         'overjet-overbite': createEmptySection('overjet-overbite'),
         deviation: createEmptySection('deviation'),
       },
+      savedConclusion: null,
     };
+    set((state) => {
+      const patients = [newPatient, ...state.patients];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+      return { patients };
+    });
+    return newPatient;
+  },
+
+  importPatientWithImages: (data) => {
+    const newPatient: Patient = {
+      id: uid('p'),
+      name: data.name,
+      gender: data.gender,
+      age: data.age,
+      caseType: data.caseType,
+      status: 'draft',
+      updatedAt: formatDate(),
+      sections: {
+        'centric-relation': createEmptySection('centric-relation'),
+        'vertical-dimension': createEmptySection('vertical-dimension'),
+        'overjet-overbite': createEmptySection('overjet-overbite'),
+        deviation: createEmptySection('deviation'),
+      },
+      savedConclusion: null,
+    };
+
+    (Object.keys(data.sectionImages) as SectionKey[]).forEach((sectionKey) => {
+      const imgs = data.sectionImages[sectionKey];
+      if (imgs && imgs.length > 0) {
+        newPatient.sections[sectionKey].images = imgs.map((img) => ({
+          id: uid('img'),
+          url: img.url,
+          name: img.name,
+        }));
+        newPatient.status = 'in-progress';
+      }
+    });
+
     set((state) => {
       const patients = [newPatient, ...state.patients];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
@@ -169,6 +255,9 @@ export const usePatientStore = create<PatientState>((set, get) => ({
               images: section.images.filter((i) => i.id !== imageId),
               annotations: section.annotations.filter(
                 (a) => a.imageId !== imageId,
+              ),
+              measurements: section.measurements.filter(
+                (m) => m.imageId !== imageId,
               ),
             },
           },
@@ -288,6 +377,149 @@ export const usePatientStore = create<PatientState>((set, get) => ({
           },
         };
       });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+      return { patients };
+    }),
+
+  addMeasurement: (patientId, sectionKey, data) => {
+    let created: Measurement | null = null;
+    set((state) => {
+      const patients = state.patients.map((p) => {
+        if (p.id !== patientId) return p;
+        const section = p.sections[sectionKey];
+        const maxOrder = section.measurements.reduce(
+          (m, a) => Math.max(m, a.orderNum),
+          0,
+        );
+        created = {
+          id: uid('m'),
+          type: data.type,
+          imageId: data.imageId,
+          x1: clampPercent(data.x1),
+          y1: clampPercent(data.y1),
+          x2: clampPercent(data.x2),
+          y2: clampPercent(data.y2),
+          label: data.label,
+          valueMm: data.valueMm,
+          direction: data.direction,
+          note: data.note || '',
+          orderNum: maxOrder + 1,
+        };
+        return {
+          ...p,
+          status: p.status === 'draft' ? 'in-progress' : p.status,
+          updatedAt: formatDate(),
+          sections: {
+            ...p.sections,
+            [sectionKey]: {
+              ...section,
+              measurements: [...section.measurements, created],
+            },
+          },
+        };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+      return { patients };
+    });
+    return created!;
+  },
+
+  updateMeasurement: (patientId, sectionKey, measurementId, patch) =>
+    set((state) => {
+      const patients = state.patients.map((p) => {
+        if (p.id !== patientId) return p;
+        const section = p.sections[sectionKey];
+        return {
+          ...p,
+          updatedAt: formatDate(),
+          sections: {
+            ...p.sections,
+            [sectionKey]: {
+              ...section,
+              measurements: section.measurements.map((m) =>
+                m.id === measurementId
+                  ? {
+                      ...m,
+                      ...patch,
+                      x1: patch.x1 !== undefined ? clampPercent(patch.x1) : m.x1,
+                      y1: patch.y1 !== undefined ? clampPercent(patch.y1) : m.y1,
+                      x2: patch.x2 !== undefined ? clampPercent(patch.x2) : m.x2,
+                      y2: patch.y2 !== undefined ? clampPercent(patch.y2) : m.y2,
+                    }
+                  : m,
+              ),
+            },
+          },
+        };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+      return { patients };
+    }),
+
+  removeMeasurement: (patientId, sectionKey, measurementId) =>
+    set((state) => {
+      const patients = state.patients.map((p) => {
+        if (p.id !== patientId) return p;
+        const section = p.sections[sectionKey];
+        const remaining = section.measurements
+          .filter((m) => m.id !== measurementId)
+          .sort((a, b) => a.orderNum - b.orderNum)
+          .map((m, i) => ({ ...m, orderNum: i + 1 }));
+        return {
+          ...p,
+          updatedAt: formatDate(),
+          sections: {
+            ...p.sections,
+            [sectionKey]: {
+              ...section,
+              measurements: remaining,
+            },
+          },
+        };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+      return { patients };
+    }),
+
+  clearSectionMeasurements: (patientId, sectionKey) =>
+    set((state) => {
+      const patients = state.patients.map((p) => {
+        if (p.id !== patientId) return p;
+        const section = p.sections[sectionKey];
+        return {
+          ...p,
+          updatedAt: formatDate(),
+          sections: {
+            ...p.sections,
+            [sectionKey]: {
+              ...section,
+              measurements: [],
+            },
+          },
+        };
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+      return { patients };
+    }),
+
+  saveConclusion: (patientId, conclusion) =>
+    set((state) => {
+      const patients = state.patients.map((p) =>
+        p.id === patientId
+          ? { ...p, savedConclusion: conclusion, updatedAt: formatDate() }
+          : p,
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+      return { patients };
+    }),
+
+  clearSavedConclusion: (patientId) =>
+    set((state) => {
+      const patients = state.patients.map((p) =>
+        p.id === patientId
+          ? { ...p, savedConclusion: null, updatedAt: formatDate() }
+          : p,
+      );
       localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
       return { patients };
     }),

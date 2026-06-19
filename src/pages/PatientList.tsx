@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, Upload } from 'lucide-react';
 import { usePatientStore } from '@/store/usePatientStore';
 import { PatientCard } from '@/components/patient/PatientCard';
 import { NewPatientModal } from '@/components/patient/NewPatientModal';
+import { BatchImportModal } from '@/components/patient/BatchImportModal';
 import { AssessmentStatus, CaseType, ASSESSMENT_STATUS_LABEL, CASE_TYPE_LABEL } from '@/types';
 
 export const PatientList = () => {
@@ -11,6 +12,7 @@ export const PatientList = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | AssessmentStatus>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | CaseType>('all');
   const [modalOpen, setModalOpen] = useState(false);
+  const [batchImportOpen, setBatchImportOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return patients.filter((p) => {
@@ -32,10 +34,19 @@ export const PatientList = () => {
               共 {patients.length} 个病例 · 点击卡片进入评估详情
             </p>
           </div>
-          <button className="btn-accent" onClick={() => setModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            新建病例
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              className="btn-outline"
+              onClick={() => setBatchImportOpen(true)}
+            >
+              <Upload className="w-4 h-4" />
+              批量导入
+            </button>
+            <button className="btn-accent" onClick={() => setModalOpen(true)}>
+              <Plus className="w-4 h-4" />
+              新建病例
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -105,6 +116,10 @@ export const PatientList = () => {
       </div>
 
       <NewPatientModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <BatchImportModal
+        isOpen={batchImportOpen}
+        onClose={() => setBatchImportOpen(false)}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -7,10 +7,19 @@ import {
   Edit3,
   Stethoscope,
   Loader2,
+  Save,
+  RefreshCw,
+  Clock,
 } from 'lucide-react';
 import { usePatientStore } from '@/store/usePatientStore';
 import { useUIStore } from '@/store/useUIStore';
-import { CASE_TYPE_LABEL, SECTION_ORDER } from '@/types';
+import {
+  CASE_TYPE_LABEL,
+  SECTION_ORDER,
+  SavedConclusion,
+  ConclusionStatus,
+  CONCLUSION_STATUS_LABEL,
+} from '@/types';
 import { generateConclusion } from '@/utils/conclusion';
 import { ConclusionCard } from '@/components/report/ConclusionCard';
 import { SectionSummaryCard } from '@/components/report/SectionSummaryCard';
@@ -20,17 +29,51 @@ export const ReportPreview = () => {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const patient = usePatientStore((s) => s.getPatient(id));
+  const saveConclusion = usePatientStore((s) => s.saveConclusion);
+  const clearSavedConclusion = usePatientStore((s) => s.clearSavedConclusion);
   const pending = useUIStore((s) => s.pendingConclusion);
   const showToast = useUIStore((s) => s.showToast);
 
-  const conclusion = useMemo(() => {
+  const generatedConclusion = useMemo(() => {
     if (!patient) return null;
     return generateConclusion(patient);
   }, [patient]);
 
-  const [patientText, setPatientText] = useState<string>(
-    conclusion?.patientExplanation || '',
-  );
+  const [useSaved, setUseSaved] = useState(false);
+  const [patientText, setPatientText] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<ConclusionStatus | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!patient) return;
+    if (patient.savedConclusion) {
+      setUseSaved(true);
+      setPatientText(patient.savedConclusion.patientExplanation);
+      setSelectedStatus(patient.savedConclusion.status);
+    } else if (generatedConclusion) {
+      setUseSaved(false);
+      setPatientText(generatedConclusion.patientExplanation);
+      setSelectedStatus(generatedConclusion.status);
+    }
+  }, [patient, generatedConclusion]);
+
+  const activeConclusion = useMemo(() => {
+    if (!generatedConclusion) return null;
+    if (useSaved && patient?.savedConclusion) {
+      return {
+        ...generatedConclusion,
+        status: patient.savedConclusion.status,
+        summary: patient.savedConclusion.summary,
+        sectionSummaries: patient.savedConclusion.sectionSummaries,
+        patientExplanation: patientText,
+      };
+    }
+    return {
+      ...generatedConclusion,
+      patientExplanation: patientText,
+      status: selectedStatus || generatedConclusion.status,
+    };
+  }, [generatedConclusion, useSaved, patient, patientText, selectedStatus]);
 
   if (!patient) {
     return (
@@ -62,10 +105,15 @@ export const ReportPreview = () => {
     );
   }
 
-  if (!conclusion) return null;
+  if (!activeConclusion || !generatedConclusion) return null;
 
   const totalAnnotations = SECTION_ORDER.reduce(
     (sum, k) => sum + patient.sections[k].annotations.length,
+    0,
+  );
+
+  const totalMeasurements = SECTION_ORDER.reduce(
+    (sum, k) => sum + patient.sections[k].measurements.length,
     0,
   );
 
@@ -76,6 +124,46 @@ export const ReportPreview = () => {
   const handleExport = () => {
     showToast('info', 'PDF 导出功能演示中，可使用浏览器打印另存为 PDF');
     handlePrint();
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const savedData: SavedConclusion = {
+        status: activeConclusion.status,
+        summary: activeConclusion.summary,
+        sectionSummaries: activeConclusion.sectionSummaries,
+        patientExplanation: patientText,
+        savedAt: new Date().toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        generatedAt: generatedConclusion.generatedAt,
+      };
+      saveConclusion(patient.id, savedData);
+      setUseSaved(true);
+      showToast('success', '已保存修改，下次打开报告时将显示此版本');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRegenerate = () => {
+    if (confirm('确认重新生成？这将覆盖当前已保存的结论和患者沟通说明。')) {
+      clearSavedConclusion(patient.id);
+      setUseSaved(false);
+      setPatientText(generatedConclusion.patientExplanation);
+      setSelectedStatus(generatedConclusion.status);
+      showToast('info', '已重新生成默认结论');
+    }
+  };
+
+  const handleStatusChange = (status: ConclusionStatus) => {
+    setSelectedStatus(status);
+    setUseSaved(false);
   };
 
   return (
@@ -95,10 +183,24 @@ export const ReportPreview = () => {
             <p className="text-xs text-ink-500">
               {patient.name} · {CASE_TYPE_LABEL[patient.caseType]} · 共{' '}
               {totalAnnotations} 处标注
+              {totalMeasurements > 0 && ` · ${totalMeasurements} 项测量`}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {patient.savedConclusion && (
+            <div className="flex items-center gap-1.5 text-xs text-primary-600 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-100">
+              <Clock className="w-3.5 h-3.5" />
+              <span>上次保存：{patient.savedConclusion.savedAt}</span>
+            </div>
+          )}
+          <button
+            className="btn-outline btn-sm"
+            onClick={handleRegenerate}
+            title="重新生成默认结论"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> 重新生成
+          </button>
           <button
             className="btn-outline btn-sm"
             onClick={() => navigate(`/patients/${patient.id}/assessment`)}
@@ -108,8 +210,20 @@ export const ReportPreview = () => {
           <button className="btn-outline btn-sm" onClick={handlePrint}>
             <Printer className="w-3.5 h-3.5" /> 打印
           </button>
-          <button className="btn-accent btn-sm" onClick={handleExport}>
-            <Download className="w-3.5 h-3.5" /> 导出 PDF
+          <button
+            className="btn-accent btn-sm"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> 保存中...
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" /> 保存修改
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -132,7 +246,12 @@ export const ReportPreview = () => {
             </div>
             <div className="text-right text-xs text-ink-500 space-y-0.5">
               <p>报告编号：{patient.id.toUpperCase()}</p>
-              <p>生成时间：{conclusion.generatedAt}</p>
+              <p>生成时间：{generatedConclusion.generatedAt}</p>
+              {useSaved && patient.savedConclusion && (
+                <p className="text-primary-600 font-medium">
+                  最后保存：{patient.savedConclusion.savedAt}
+                </p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-4 gap-6 mt-5 text-sm">
@@ -159,21 +278,24 @@ export const ReportPreview = () => {
           </div>
         </div>
 
-        <ConclusionCard conclusion={conclusion} />
+        <ConclusionCard
+          conclusion={activeConclusion}
+          onStatusChange={handleStatusChange}
+        />
 
         <div>
           <h3 className="text-sm font-semibold text-ink-700 mb-3 flex items-center gap-2">
             <span className="w-1 h-4 bg-accent-500 rounded-full" />
             分区评估摘要
           </h3>
-          <SectionSummaryCard summaries={conclusion.sectionSummaries} />
+          <SectionSummaryCard summaries={activeConclusion.sectionSummaries} />
         </div>
 
         <PatientExplanation
           initialText={patientText}
           onChange={(t) => {
             setPatientText(t);
-            showToast('success', '患者沟通说明已更新');
+            setUseSaved(false);
           }}
         />
 
