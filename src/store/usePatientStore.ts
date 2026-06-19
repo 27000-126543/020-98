@@ -5,11 +5,13 @@ import {
   AssessmentSection,
   CaseType,
   Patient,
+  ReviewInfo,
   SectionImage,
   SectionKey,
   SECTION_LABEL,
   AssessmentStatus,
   Measurement,
+  MeasurementCategory,
   MeasurementDirection,
   MeasurementType,
   SavedConclusion,
@@ -97,6 +99,7 @@ interface PatientState {
     data: {
       imageId: string;
       type: MeasurementType;
+      category: MeasurementCategory;
       x1: number;
       y1: number;
       x2: number;
@@ -126,6 +129,7 @@ interface PatientState {
   ) => void;
   saveConclusion: (patientId: string, conclusion: SavedConclusion) => void;
   clearSavedConclusion: (patientId: string) => void;
+  reviewPatient: (patientId: string, reviewInfo: ReviewInfo) => void;
   touchPatient: (id: string) => void;
 }
 
@@ -150,6 +154,8 @@ export const usePatientStore = create<PatientState>((set, get) => ({
         deviation: createEmptySection('deviation'),
       },
       savedConclusion: null,
+      reviewStatus: 'pending',
+      reviewInfo: null,
     };
     set((state) => {
       const patients = [newPatient, ...state.patients];
@@ -175,6 +181,8 @@ export const usePatientStore = create<PatientState>((set, get) => ({
         deviation: createEmptySection('deviation'),
       },
       savedConclusion: null,
+      reviewStatus: 'pending',
+      reviewInfo: null,
     };
 
     (Object.keys(data.sectionImages) as SectionKey[]).forEach((sectionKey) => {
@@ -394,6 +402,7 @@ export const usePatientStore = create<PatientState>((set, get) => ({
         created = {
           id: uid('m'),
           type: data.type,
+          category: data.category,
           imageId: data.imageId,
           x1: clampPercent(data.x1),
           y1: clampPercent(data.y1),
@@ -518,6 +527,22 @@ export const usePatientStore = create<PatientState>((set, get) => ({
       const patients = state.patients.map((p) =>
         p.id === patientId
           ? { ...p, savedConclusion: null, updatedAt: formatDate() }
+          : p,
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+      return { patients };
+    }),
+
+  reviewPatient: (patientId, reviewInfo) =>
+    set((state) => {
+      const patients = state.patients.map((p) =>
+        p.id === patientId
+          ? {
+              ...p,
+              reviewStatus: 'reviewed' as const,
+              reviewInfo,
+              updatedAt: formatDate(),
+            }
           : p,
       );
       localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));

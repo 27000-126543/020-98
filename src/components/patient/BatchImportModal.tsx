@@ -162,24 +162,17 @@ export const BatchImportModal = ({ isOpen, onClose }: Props) => {
     if (!canSubmit) return;
     setIsSubmitting(true);
     try {
-      const sectionImagesData: Record<
-        SectionKey,
-        Array<{ url: string; name: string }>
-      > = {
-        'centric-relation': [],
-        'vertical-dimension': [],
-        'overjet-overbite': [],
-        deviation: [],
-      };
+      const sectionImagesData: Partial<
+        Record<SectionKey, Array<{ url: string; name: string }>>
+      > = {};
       (Object.keys(sectionImages) as SectionKey[]).forEach((key) => {
-        sectionImages[key].files.forEach((file, i) => {
-          sectionImagesData[key].push({
-            url: sectionImages[key].previews[i],
-            name: file.name,
-          });
-        });
+        if (sectionImages[key].files.length === 0) return;
+        sectionImagesData[key] = sectionImages[key].files.map((file, i) => ({
+          url: sectionImages[key].previews[i],
+          name: file.name,
+        }));
       });
-      const newPatientId = await importPatientWithImages({
+      const newPatient = importPatientWithImages({
         name: formData.name.trim(),
         gender: formData.gender,
         age: parseInt(formData.age),
@@ -191,7 +184,7 @@ export const BatchImportModal = ({ isOpen, onClose }: Props) => {
         `已成功导入病例 ${formData.name}，共 ${totalImages} 张图像`,
       );
       handleClose();
-      navigate(`/patients/${newPatientId}/assessment`);
+      navigate(`/patients/${newPatient.id}/assessment`);
     } catch (e) {
       showToast('error', '导入失败，请重试');
     } finally {

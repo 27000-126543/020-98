@@ -6,6 +6,8 @@ import {
   AssessmentSection,
   ConclusionStatus,
   CONCLUSION_STATUS_LABEL,
+  MeasurementCategory,
+  MEASUREMENT_CATEGORY_LABEL,
   Patient,
   RiskLevel,
   SectionKey,
@@ -55,6 +57,7 @@ const calcRiskLevel = (section: AssessmentSection): RiskLevel => {
 
 const buildKeyFindings = (section: AssessmentSection): string[] => {
   const findings: string[] = [];
+  const categoryMap: Partial<Record<MeasurementCategory, { count: number; maxMm: number }>> = {};
   if (section.annotations.length === 0 && section.measurements.length === 0) {
     return ['未见明显异常'];
   }
@@ -69,20 +72,21 @@ const buildKeyFindings = (section: AssessmentSection): string[] => {
   }
   section.measurements.forEach((m) => {
     if (m.type === 'distance' && m.valueMm > 0) {
-      const dirText =
-        m.direction === 'left'
-          ? '（偏左）'
-          : m.direction === 'right'
-            ? '（偏右）'
-            : m.direction === 'horizontal'
-              ? '（水平）'
-              : m.direction === 'vertical'
-                ? '（垂直）'
-                : '';
-      findings.push(`${m.label}：${m.valueMm.toFixed(1)}mm ${dirText}`);
+      const cat = m.category;
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = { count: 0, maxMm: 0 };
+      }
+      categoryMap[cat].count += 1;
+      if (m.valueMm > categoryMap[cat].maxMm) {
+        categoryMap[cat].maxMm = m.valueMm;
+      }
     } else if (m.type === 'reference-line') {
       findings.push(`${m.label}：参考线已绘制`);
     }
+  });
+  Object.entries(categoryMap).forEach(([cat, { count, maxMm }]) => {
+    const catLabel = MEASUREMENT_CATEGORY_LABEL[cat as MeasurementCategory];
+    findings.push(`${catLabel}：${count}项测量（最大 ${maxMm.toFixed(1)}mm）`);
   });
   return findings;
 };
@@ -102,6 +106,24 @@ const buildMeasurementSummary = (section: AssessmentSection) => {
       valueMm: m.valueMm,
       direction: m.direction,
     }));
+  const byCategory: Partial<Record<MeasurementCategory, {
+    count: number;
+    items: Array<{ label: string; valueMm: number; direction: string }>;
+  }>> = {};
+  section.measurements.forEach((m) => {
+    if (m.type === 'distance' && m.valueMm > 0) {
+      const cat = m.category;
+      if (!byCategory[cat]) {
+        byCategory[cat] = { count: 0, items: [] };
+      }
+      byCategory[cat]!.count += 1;
+      byCategory[cat]!.items.push({
+        label: m.label,
+        valueMm: m.valueMm,
+        direction: m.direction,
+      });
+    }
+  });
   return {
     totalDistanceMm,
     hasHorizontalDeviation: section.measurements.some(
@@ -111,6 +133,7 @@ const buildMeasurementSummary = (section: AssessmentSection) => {
       (m) => m.direction === 'vertical',
     ),
     deviations,
+    byCategory,
   };
 };
 

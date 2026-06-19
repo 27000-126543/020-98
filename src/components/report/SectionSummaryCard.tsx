@@ -4,6 +4,8 @@ import {
   SECTION_LABEL,
   SectionSummary,
   RiskLevel,
+  MeasurementCategory,
+  MEASUREMENT_CATEGORY_LABEL,
 } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -41,12 +43,23 @@ const SECTION_ORDER: SectionKey[] = [
   'deviation',
 ];
 
+const CATEGORY_COLORS: Record<MeasurementCategory, string> = {
+  'horizontal-overjet': 'bg-blue-50 text-blue-700 border-blue-100',
+  'vertical-overbite': 'bg-purple-50 text-purple-700 border-purple-100',
+  'midline-deviation': 'bg-teal-50 text-teal-700 border-teal-100',
+  'occlusal-plane': 'bg-amber-50 text-amber-700 border-amber-100',
+};
+
 export const SectionSummaryCard = ({ summaries }: Props) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {SECTION_ORDER.map((key) => {
         const s = summaries[key];
         const risk = RISK_CONFIG[s.riskLevel];
+        const byCategory = s.measurementSummary.byCategory;
+        const categoryEntries = Object.entries(byCategory || {}) as Array<
+          [MeasurementCategory, { count: number; items: Array<{ label: string; valueMm: number; direction: string }> }]
+        >;
         return (
           <div
             key={key}
@@ -86,15 +99,38 @@ export const SectionSummaryCard = ({ summaries }: Props) => {
                         共 {s.measurementSummary.totalDistanceMm.toFixed(1)} mm
                       </div>
                     )}
-                    {s.measurementSummary.deviations.length > 0 && (
-                      <div className="text-danger-600">
-                        检出 {s.measurementSummary.deviations.length} 处偏移
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
             </div>
+
+            {categoryEntries.length > 0 && (
+              <div className="space-y-1.5 mb-3 pb-3 border-b border-ink-100">
+                {categoryEntries.map(([cat, data]) => (
+                  <div
+                    key={cat}
+                    className={cn(
+                      'flex items-center justify-between px-2.5 py-1.5 rounded-md border text-xs',
+                      CATEGORY_COLORS[cat],
+                    )}
+                  >
+                    <span className="font-medium">
+                      {MEASUREMENT_CATEGORY_LABEL[cat]}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span>{data.count} 项</span>
+                      {data.items.some((item) => item.valueMm > 0) && (
+                        <span className="font-mono font-semibold">
+                          最大{' '}
+                          {Math.max(...data.items.map((item) => item.valueMm)).toFixed(1)}mm
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <ul className="space-y-1 pt-3 border-t border-ink-100">
               {s.keyFindings.map((f, i) => (
                 <li

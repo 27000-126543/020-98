@@ -12,6 +12,11 @@ export type AnnotationType =
   | 'jaw-instability';
 export type MeasurementType = 'distance' | 'reference-line';
 export type MeasurementDirection = 'horizontal' | 'vertical' | 'left' | 'right' | 'none';
+export type MeasurementCategory =
+  | 'horizontal-overjet'
+  | 'vertical-overbite'
+  | 'midline-deviation'
+  | 'occlusal-plane';
 export type ConclusionStatus =
   | 'review-required'
   | 'ready-for-design'
@@ -19,6 +24,20 @@ export type ConclusionStatus =
 export type RiskLevel = 'normal' | 'mild' | 'moderate' | 'severe';
 
 export const MEASUREMENT_ENABLED_SECTIONS = ['overjet-overbite', 'deviation'] as const;
+
+export const MEASUREMENT_CATEGORY_LABEL: Record<MeasurementCategory, string> = {
+  'horizontal-overjet': '水平覆盖',
+  'vertical-overbite': '垂直覆合',
+  'midline-deviation': '中线偏移',
+  'occlusal-plane': '咬合平面参考线',
+};
+
+export const MEASUREMENT_CATEGORY_SECTION: Record<MeasurementCategory, SectionKey[]> = {
+  'horizontal-overjet': ['overjet-overbite'],
+  'vertical-overbite': ['overjet-overbite'],
+  'midline-deviation': ['deviation'],
+  'occlusal-plane': ['overjet-overbite', 'deviation'],
+};
 
 export const CASE_TYPE_LABEL: Record<CaseType, string> = {
   'implant-full': '种植全口',
@@ -92,6 +111,7 @@ export interface Annotation {
 export interface Measurement {
   id: string;
   type: MeasurementType;
+  category: MeasurementCategory;
   imageId: string;
   x1: number;
   y1: number;
@@ -122,6 +142,14 @@ export interface Patient {
   updatedAt: string;
   sections: Record<SectionKey, AssessmentSection>;
   savedConclusion: SavedConclusion | null;
+  reviewStatus: 'pending' | 'reviewed';
+  reviewInfo: ReviewInfo | null;
+}
+
+export interface ReviewInfo {
+  reviewerName: string;
+  reviewedAt: string;
+  opinion: string;
 }
 
 export interface SavedConclusion {
@@ -131,6 +159,7 @@ export interface SavedConclusion {
   patientExplanation: string;
   savedAt: string;
   generatedAt: string;
+  reviewInfo: ReviewInfo | null;
 }
 
 export interface SectionSummary {
@@ -143,6 +172,10 @@ export interface SectionSummary {
     hasHorizontalDeviation: boolean;
     hasVerticalDeviation: boolean;
     deviations: Array<{ label: string; valueMm: number; direction: string }>;
+    byCategory: Partial<Record<MeasurementCategory, {
+      count: number;
+      items: Array<{ label: string; valueMm: number; direction: string }>;
+    }>>;
   };
 }
 

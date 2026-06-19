@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -17,6 +17,7 @@ import {
   SectionKey,
   Measurement,
   MEASUREMENT_ENABLED_SECTIONS,
+  MeasurementCategory,
 } from '@/types';
 import { SectionTabs } from '@/components/assessment/SectionTabs';
 import { ThumbnailList } from '@/components/assessment/ThumbnailList';
@@ -26,9 +27,18 @@ import { AnnotationToolbar } from '@/components/assessment/AnnotationToolbar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { generateConclusion } from '@/utils/conclusion';
 
+const DEFAULT_CATEGORY_MAP: Record<SectionKey, MeasurementCategory> = {
+  'centric-relation': 'occlusal-plane',
+  'vertical-dimension': 'vertical-overbite',
+  'overjet-overbite': 'horizontal-overjet',
+  deviation: 'midline-deviation',
+};
+
 export const AssessmentDetail = () => {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialSection = searchParams.get('section') as SectionKey | null;
   const patient = usePatientStore((s) => s.getPatient(id));
   const addSectionImage = usePatientStore((s) => s.addSectionImage);
   const removeSectionImage = usePatientStore((s) => s.removeSectionImage);
@@ -49,7 +59,11 @@ export const AssessmentDetail = () => {
   const showToast = useUIStore((s) => s.showToast);
   const setPendingConclusion = useUIStore((s) => s.setPendingConclusion);
 
-  const [sectionKey, setSectionKey] = useState<SectionKey>('centric-relation');
+  const [sectionKey, setSectionKey] = useState<SectionKey>(
+    initialSection && SECTION_ORDER.includes(initialSection)
+      ? initialSection
+      : 'centric-relation',
+  );
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<
     AnnotationType | 'pan' | 'measure-distance' | 'measure-line' | null
@@ -161,10 +175,12 @@ export const AssessmentDetail = () => {
     y2: number;
   }) => {
     if (!activeImage) return;
+    const defaultCategory = DEFAULT_CATEGORY_MAP[sectionKey];
     const defaultLabel = data.type === 'distance' ? '距离测量' : '参考线';
     const m = addMeasurement(patient.id, sectionKey, {
       imageId: activeImage.id,
       type: data.type,
+      category: defaultCategory,
       x1: data.x1,
       y1: data.y1,
       x2: data.x2,

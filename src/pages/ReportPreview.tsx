@@ -3,13 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Printer,
-  Download,
   Edit3,
   Stethoscope,
   Loader2,
   Save,
   RefreshCw,
   Clock,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import { usePatientStore } from '@/store/usePatientStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -18,12 +19,13 @@ import {
   SECTION_ORDER,
   SavedConclusion,
   ConclusionStatus,
-  CONCLUSION_STATUS_LABEL,
+  ReviewInfo,
 } from '@/types';
 import { generateConclusion } from '@/utils/conclusion';
 import { ConclusionCard } from '@/components/report/ConclusionCard';
 import { SectionSummaryCard } from '@/components/report/SectionSummaryCard';
 import { PatientExplanation } from '@/components/report/PatientExplanation';
+import { cn } from '@/lib/utils';
 
 export const ReportPreview = () => {
   const { id = '' } = useParams();
@@ -31,6 +33,7 @@ export const ReportPreview = () => {
   const patient = usePatientStore((s) => s.getPatient(id));
   const saveConclusion = usePatientStore((s) => s.saveConclusion);
   const clearSavedConclusion = usePatientStore((s) => s.clearSavedConclusion);
+  const reviewPatient = usePatientStore((s) => s.reviewPatient);
   const pending = useUIStore((s) => s.pendingConclusion);
   const showToast = useUIStore((s) => s.showToast);
 
@@ -43,6 +46,9 @@ export const ReportPreview = () => {
   const [patientText, setPatientText] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<ConclusionStatus | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [reviewName, setReviewName] = useState('');
+  const [reviewOpinion, setReviewOpinion] = useState('');
 
   useEffect(() => {
     if (!patient) return;
@@ -121,11 +127,6 @@ export const ReportPreview = () => {
     window.print();
   };
 
-  const handleExport = () => {
-    showToast('info', 'PDF 导出功能演示中，可使用浏览器打印另存为 PDF');
-    handlePrint();
-  };
-
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -142,6 +143,7 @@ export const ReportPreview = () => {
           minute: '2-digit',
         }),
         generatedAt: generatedConclusion.generatedAt,
+        reviewInfo: patient.savedConclusion?.reviewInfo || null,
       };
       saveConclusion(patient.id, savedData);
       setUseSaved(true);
@@ -166,6 +168,38 @@ export const ReportPreview = () => {
     setUseSaved(false);
   };
 
+  const handleReview = () => {
+    if (!reviewName.trim()) {
+      showToast('warning', '请输入复核医生姓名');
+      return;
+    }
+    const reviewInfo: ReviewInfo = {
+      reviewerName: reviewName.trim(),
+      reviewedAt: new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      opinion: reviewOpinion.trim(),
+    };
+    reviewPatient(patient.id, reviewInfo);
+    if (patient.savedConclusion) {
+      saveConclusion(patient.id, {
+        ...patient.savedConclusion,
+        reviewInfo,
+      });
+    }
+    setReviewFormOpen(false);
+    setReviewName('');
+    setReviewOpinion('');
+    showToast('success', `已由 ${reviewInfo.reviewerName} 完成复核`);
+  };
+
+  const isReviewed = patient.reviewStatus === 'reviewed';
+  const existingReview = patient.reviewInfo;
+
   return (
     <div className="h-full overflow-y-auto scrollbar-thin bg-ink-100">
       <div className="no-print sticky top-0 z-20 h-14 bg-white border-b border-ink-100 px-6 flex items-center justify-between shrink-0 shadow-sm">
@@ -188,11 +222,34 @@ export const ReportPreview = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border',
+              isReviewed
+                ? 'bg-accent-50 text-accent-700 border-accent-200'
+                : 'bg-warning-50 text-warning-700 border-warning-200',
+            )}
+          >
+            {isReviewed ? (
+              <ShieldCheck className="w-3.5 h-3.5" />
+            ) : (
+              <Clock className="w-3.5 h-3.5" />
+            )}
+            <span>{isReviewed ? '已复核' : '待复核'}</span>
+          </div>
           {patient.savedConclusion && (
             <div className="flex items-center gap-1.5 text-xs text-primary-600 bg-primary-50 px-3 py-1.5 rounded-full border border-primary-100">
               <Clock className="w-3.5 h-3.5" />
-              <span>上次保存：{patient.savedConclusion.savedAt}</span>
+              <span>保存：{patient.savedConclusion.savedAt}</span>
             </div>
+          )}
+          {!isReviewed && (
+            <button
+              className="btn-outline btn-sm"
+              onClick={() => setReviewFormOpen(true)}
+            >
+              <UserCheck className="w-3.5 h-3.5" /> 复核确认
+            </button>
           )}
           <button
             className="btn-outline btn-sm"
@@ -283,6 +340,100 @@ export const ReportPreview = () => {
           onStatusChange={handleStatusChange}
         />
 
+        {isReviewed && existingReview && (
+          <div className="card p-5 border-l-4 border-accent-500">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-accent-100 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-accent-600" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-ink-800">复核确认</h3>
+                  <span className="badge bg-accent-100 text-accent-700">
+                    已通过
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-ink-500">复核医生</p>
+                    <p className="font-medium text-ink-800">
+                      {existingReview.reviewerName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-ink-500">复核时间</p>
+                    <p className="font-medium text-ink-800">
+                      {existingReview.reviewedAt}
+                    </p>
+                  </div>
+                </div>
+                {existingReview.opinion && (
+                  <div className="mt-2">
+                    <p className="text-xs text-ink-500">复核意见</p>
+                    <p className="text-sm text-ink-700 mt-0.5 leading-relaxed">
+                      {existingReview.opinion}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {reviewFormOpen && (
+          <div className="card p-5 border-l-4 border-primary-500">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary-100 flex items-center justify-center shrink-0">
+                <UserCheck className="w-5 h-5 text-primary-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-ink-800">
+                  复核确认
+                </h3>
+                <p className="text-xs text-ink-500 mt-0.5">
+                  请填写复核信息以确认此报告
+                </p>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="block text-xs text-ink-600 mb-1 font-medium">
+                      复核医生姓名 <span className="text-danger-500">*</span>
+                    </label>
+                    <input
+                      className="input w-full text-sm"
+                      placeholder="请输入复核医生姓名"
+                      value={reviewName}
+                      onChange={(e) => setReviewName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-ink-600 mb-1 font-medium">
+                      复核意见
+                    </label>
+                    <textarea
+                      className="textarea w-full text-sm"
+                      placeholder="填写复核意见（选填）"
+                      rows={3}
+                      value={reviewOpinion}
+                      onChange={(e) => setReviewOpinion(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="btn-outline btn-sm"
+                      onClick={() => setReviewFormOpen(false)}
+                    >
+                      取消
+                    </button>
+                    <button className="btn-accent btn-sm" onClick={handleReview}>
+                      <ShieldCheck className="w-3.5 h-3.5" /> 确认复核
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div>
           <h3 className="text-sm font-semibold text-ink-700 mb-3 flex items-center gap-2">
             <span className="w-1 h-4 bg-accent-500 rounded-full" />
@@ -300,7 +451,8 @@ export const ReportPreview = () => {
         />
 
         <div className="text-center text-xs text-ink-400 py-6 border-t border-ink-200">
-          — 本报告由口腔咬合评估工作台生成，仅供临床参考 —
+          — 本报告由口腔咬合评估工作台生成，仅供临床参考
+          {isReviewed && ' · 已复核确认'} —
         </div>
       </div>
     </div>

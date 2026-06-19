@@ -16,6 +16,8 @@ export const MOCK_PATIENTS: Patient[] = [
     age: 67,
     caseType: 'implant-full',
     status: 'in-progress',
+    reviewStatus: 'pending',
+    reviewInfo: null,
     updatedAt: '2026-06-18 14:32',
     savedConclusion: null,
     sections: {
@@ -92,6 +94,7 @@ export const MOCK_PATIENTS: Patient[] = [
           {
             id: 'm-1',
             type: 'distance',
+            category: 'horizontal-overjet',
             imageId: 'img-6',
             x1: 38,
             y1: 45,
@@ -115,6 +118,8 @@ export const MOCK_PATIENTS: Patient[] = [
     age: 72,
     caseType: 'removable-denture',
     status: 'completed',
+    reviewStatus: 'pending',
+    reviewInfo: null,
     updatedAt: '2026-06-15 10:15',
     savedConclusion: null,
     sections: {
@@ -168,6 +173,7 @@ export const MOCK_PATIENTS: Patient[] = [
           {
             id: 'm-2',
             type: 'distance',
+            category: 'midline-deviation',
             imageId: 'img-5',
             x1: 50,
             y1: 30,
@@ -182,6 +188,7 @@ export const MOCK_PATIENTS: Patient[] = [
           {
             id: 'm-3',
             type: 'distance',
+            category: 'midline-deviation',
             imageId: 'img-5',
             x1: 48,
             y1: 30,
@@ -204,6 +211,8 @@ export const MOCK_PATIENTS: Patient[] = [
     age: 58,
     caseType: 'severe-wear',
     status: 'draft',
+    reviewStatus: 'pending',
+    reviewInfo: null,
     updatedAt: '2026-06-10 16:48',
     savedConclusion: null,
     sections: {
@@ -220,6 +229,8 @@ export const MOCK_PATIENTS: Patient[] = [
     age: 63,
     caseType: 'implant-full',
     status: 'draft',
+    reviewStatus: 'pending',
+    reviewInfo: null,
     updatedAt: '2026-06-08 09:20',
     savedConclusion: null,
     sections: {

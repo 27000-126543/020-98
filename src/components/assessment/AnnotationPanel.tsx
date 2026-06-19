@@ -20,6 +20,8 @@ import {
   Measurement,
   MEASUREMENT_ENABLED_SECTIONS,
   MeasurementDirection,
+  MeasurementCategory,
+  MEASUREMENT_CATEGORY_LABEL,
 } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +38,13 @@ interface Props {
   onRemoveMeasurement: (id: string) => void;
   onClearMeasurements: () => void;
 }
+
+const CATEGORY_OPTIONS: Array<{ value: MeasurementCategory; label: string }> = [
+  { value: 'horizontal-overjet', label: MEASUREMENT_CATEGORY_LABEL['horizontal-overjet'] },
+  { value: 'vertical-overbite', label: MEASUREMENT_CATEGORY_LABEL['vertical-overbite'] },
+  { value: 'midline-deviation', label: MEASUREMENT_CATEGORY_LABEL['midline-deviation'] },
+  { value: 'occlusal-plane', label: MEASUREMENT_CATEGORY_LABEL['occlusal-plane'] },
+];
 
 const DIRECTION_OPTIONS: Array<{ value: MeasurementDirection; label: string }> = [
   { value: 'none', label: '无方向' },
@@ -63,7 +72,7 @@ export const AnnotationPanel = ({
     null,
   );
   const [draftNote, setDraftNote] = useState('');
-  const [draftMeasurement, setDraftMeasurement] = useState<Partial<Measurement>>({});
+  const [draftMeasurement, setDraftMeasurement] = useState<Partial<Measurement> & { category?: MeasurementCategory }>({});
   const [collapsed, setCollapsed] = useState(false);
   const [measurementsCollapsed, setMeasurementsCollapsed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -103,6 +112,7 @@ export const AnnotationPanel = ({
       label: m.label,
       valueMm: m.valueMm,
       direction: m.direction,
+      category: m.category,
       note: m.note,
     });
     setEditingId(null);
@@ -360,6 +370,11 @@ export const AnnotationPanel = ({
                               <span className="text-xs font-medium text-primary-700">
                                 {m.label || (m.type === 'distance' ? '距离测量' : '参考线')}
                               </span>
+                              {m.category && (
+                                <span className="text-[10px] text-accent-700 bg-accent-100 px-1.5 py-0.5 rounded">
+                                  {MEASUREMENT_CATEGORY_LABEL[m.category]}
+                                </span>
+                              )}
                               {m.type === 'distance' && m.valueMm > 0 && (
                                 <span className="text-[11px] font-mono text-primary-600 font-semibold bg-primary-100 px-1.5 py-0.5 rounded">
                                   {m.valueMm.toFixed(1)} mm
@@ -412,6 +427,26 @@ export const AnnotationPanel = ({
                                     }
                                     placeholder="测量标签"
                                   />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-ink-500 mb-0.5">分类</label>
+                                  <select
+                                    className="input text-xs w-full"
+                                    value={draftMeasurement.category || ''}
+                                    onChange={(e) =>
+                                      setDraftMeasurement({
+                                        ...draftMeasurement,
+                                        category: e.target.value as MeasurementCategory,
+                                      })
+                                    }
+                                  >
+                                    <option value="">未分类</option>
+                                    {CATEGORY_OPTIONS.map((opt) => (
+                                      <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
                                 {m.type === 'distance' && (
                                   <div>
