@@ -11,6 +11,7 @@ import {
   Image,
   MapPin,
   Ruler,
+  Users,
 } from 'lucide-react';
 import {
   Patient,
@@ -46,7 +47,11 @@ const getSectionCompleteness = (
     const hasImages = section.images.length > 0;
     const hasAnnotations = section.annotations.length > 0;
     const hasMeasurements = section.measurements.length > 0;
-    const isComplete = hasImages && hasAnnotations;
+    const requiresMeasurement =
+      key === 'overjet-overbite' || key === 'deviation';
+    const isComplete = requiresMeasurement
+      ? hasImages && hasAnnotations && hasMeasurements
+      : hasImages && hasAnnotations;
     return {
       key,
       label: SECTION_LABEL[key],
@@ -170,6 +175,15 @@ export const PatientCard = ({ patient }: Props) => {
                   >
                     <FileText className="w-4 h-4" /> 查看报告
                   </button>
+                  <button
+                    className="w-full px-3 py-2 text-left text-sm text-ink-700 hover:bg-ink-50 flex items-center gap-2"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      navigate(`/patients/${patient.id}/handover`);
+                    }}
+                  >
+                    <Users className="w-4 h-4" /> 交接视图
+                  </button>
                   <div className="h-px bg-ink-100" />
                   <button
                     className="w-full px-3 py-2 text-left text-sm text-danger-600 hover:bg-danger-50 flex items-center gap-2"
@@ -218,7 +232,15 @@ export const PatientCard = ({ patient }: Props) => {
                   e.stopPropagation();
                   navigateToSection(s.key);
                 }}
-                title={`${s.label}：${s.isComplete ? '资料完整' : s.hasImages ? '有照片，缺标注' : '缺照片和标注'}`}
+                title={`${s.label}：${
+                  s.isComplete
+                    ? '资料完整'
+                    : !s.hasImages
+                      ? '缺照片'
+                      : !s.hasAnnotations
+                        ? '有照片，缺标注'
+                        : '有照片和标注，缺测量'
+                }`}
               >
                 <div className="flex items-center gap-0.5">
                   {s.isComplete ? (

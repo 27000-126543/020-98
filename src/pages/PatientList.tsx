@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search, Filter, Upload } from 'lucide-react';
+import { Plus, Search, Filter, Upload, ShieldCheck, Clock } from 'lucide-react';
 import { usePatientStore } from '@/store/usePatientStore';
 import { PatientCard } from '@/components/patient/PatientCard';
 import { NewPatientModal } from '@/components/patient/NewPatientModal';
@@ -11,6 +11,7 @@ export const PatientList = () => {
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | AssessmentStatus>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | CaseType>('all');
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'pending' | 'reviewed'>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [batchImportOpen, setBatchImportOpen] = useState(false);
 
@@ -20,9 +21,10 @@ export const PatientList = () => {
         return false;
       if (statusFilter !== 'all' && p.status !== statusFilter) return false;
       if (typeFilter !== 'all' && p.caseType !== typeFilter) return false;
+      if (reviewFilter !== 'all' && p.reviewStatus !== reviewFilter) return false;
       return true;
     });
-  }, [patients, keyword, statusFilter, typeFilter]);
+  }, [patients, keyword, statusFilter, typeFilter, reviewFilter]);
 
   return (
     <div className="h-full flex flex-col bg-ink-50">
@@ -86,6 +88,15 @@ export const PatientList = () => {
                   {CASE_TYPE_LABEL[k]}
                 </option>
               ))}
+            </select>
+            <select
+              className="input w-auto"
+              value={reviewFilter}
+              onChange={(e) => setReviewFilter(e.target.value as any)}
+            >
+              <option value="all">全部复核状态</option>
+              <option value="pending">待复核</option>
+              <option value="reviewed">已复核</option>
             </select>
           </div>
         </div>

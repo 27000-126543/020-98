@@ -3,6 +3,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { PatientList } from '@/pages/PatientList';
 import { AssessmentDetail } from '@/pages/AssessmentDetail';
 import { ReportPreview } from '@/pages/ReportPreview';
+import { HandoverView } from '@/pages/HandoverView';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
             element={<AssessmentDetail />}
           />
           <Route path="/patients/:id/report" element={<ReportPreview />} />
+          <Route path="/patients/:id/handover" element={<HandoverView />} />
           <Route path="*" element={<Navigate to="/patients" replace />} />
         </Route>
       </Routes>

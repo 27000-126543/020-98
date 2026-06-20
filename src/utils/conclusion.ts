@@ -57,7 +57,11 @@ const calcRiskLevel = (section: AssessmentSection): RiskLevel => {
 
 const buildKeyFindings = (section: AssessmentSection): string[] => {
   const findings: string[] = [];
-  const categoryMap: Partial<Record<MeasurementCategory, { count: number; maxMm: number }>> = {};
+  const categoryMap: Partial<Record<MeasurementCategory, {
+    distanceCount: number;
+    lineCount: number;
+    maxMm: number;
+  }>> = {};
   if (section.annotations.length === 0 && section.measurements.length === 0) {
     return ['未见明显异常'];
   }
@@ -71,22 +75,30 @@ const buildKeyFindings = (section: AssessmentSection): string[] => {
     });
   }
   section.measurements.forEach((m) => {
-    if (m.type === 'distance' && m.valueMm > 0) {
-      const cat = m.category;
-      if (!categoryMap[cat]) {
-        categoryMap[cat] = { count: 0, maxMm: 0 };
-      }
-      categoryMap[cat].count += 1;
+    const cat = m.category;
+    if (!categoryMap[cat]) {
+      categoryMap[cat] = { distanceCount: 0, lineCount: 0, maxMm: 0 };
+    }
+    if (m.type === 'distance') {
+      categoryMap[cat].distanceCount += 1;
       if (m.valueMm > categoryMap[cat].maxMm) {
         categoryMap[cat].maxMm = m.valueMm;
       }
     } else if (m.type === 'reference-line') {
-      findings.push(`${m.label}：参考线已绘制`);
+      categoryMap[cat].lineCount += 1;
     }
   });
-  Object.entries(categoryMap).forEach(([cat, { count, maxMm }]) => {
+  Object.entries(categoryMap).forEach(([cat, { distanceCount, lineCount, maxMm }]) => {
     const catLabel = MEASUREMENT_CATEGORY_LABEL[cat as MeasurementCategory];
-    findings.push(`${catLabel}：${count}项测量（最大 ${maxMm.toFixed(1)}mm）`);
+    const parts: string[] = [];
+    if (distanceCount > 0) {
+      parts.push(`${distanceCount}项距离`);
+    }
+    if (lineCount > 0) {
+      parts.push(`${lineCount}条参考线`);
+    }
+    const mmText = maxMm > 0 ? `（最大 ${maxMm.toFixed(1)}mm）` : '';
+    findings.push(`${catLabel}：${parts.join(' + ')}${mmText}`);
   });
   return findings;
 };
@@ -108,21 +120,27 @@ const buildMeasurementSummary = (section: AssessmentSection) => {
     }));
   const byCategory: Partial<Record<MeasurementCategory, {
     count: number;
-    items: Array<{ label: string; valueMm: number; direction: string }>;
+    distanceCount: number;
+    lineCount: number;
+    items: Array<{ label: string; valueMm: number; direction: string; type: string }>;
   }>> = {};
   section.measurements.forEach((m) => {
-    if (m.type === 'distance' && m.valueMm > 0) {
-      const cat = m.category;
-      if (!byCategory[cat]) {
-        byCategory[cat] = { count: 0, items: [] };
-      }
-      byCategory[cat]!.count += 1;
-      byCategory[cat]!.items.push({
-        label: m.label,
-        valueMm: m.valueMm,
-        direction: m.direction,
-      });
+    const cat = m.category;
+    if (!byCategory[cat]) {
+      byCategory[cat] = { count: 0, distanceCount: 0, lineCount: 0, items: [] };
     }
+    byCategory[cat]!.count += 1;
+    if (m.type === 'distance') {
+      byCategory[cat]!.distanceCount += 1;
+    } else {
+      byCategory[cat]!.lineCount += 1;
+    }
+    byCategory[cat]!.items.push({
+      label: m.label,
+      valueMm: m.valueMm,
+      direction: m.direction,
+      type: m.type,
+    });
   });
   return {
     totalDistanceMm,

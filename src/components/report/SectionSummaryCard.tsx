@@ -58,7 +58,7 @@ export const SectionSummaryCard = ({ summaries }: Props) => {
         const risk = RISK_CONFIG[s.riskLevel];
         const byCategory = s.measurementSummary.byCategory;
         const categoryEntries = Object.entries(byCategory || {}) as Array<
-          [MeasurementCategory, { count: number; items: Array<{ label: string; valueMm: number; direction: string }> }]
+          [MeasurementCategory, { count: number; distanceCount: number; lineCount: number; items: Array<{ label: string; valueMm: number; direction: string; type: string }> }]
         >;
         return (
           <div
@@ -106,28 +106,40 @@ export const SectionSummaryCard = ({ summaries }: Props) => {
 
             {categoryEntries.length > 0 && (
               <div className="space-y-1.5 mb-3 pb-3 border-b border-ink-100">
-                {categoryEntries.map(([cat, data]) => (
-                  <div
-                    key={cat}
-                    className={cn(
-                      'flex items-center justify-between px-2.5 py-1.5 rounded-md border text-xs',
-                      CATEGORY_COLORS[cat],
-                    )}
-                  >
-                    <span className="font-medium">
-                      {MEASUREMENT_CATEGORY_LABEL[cat]}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span>{data.count} 项</span>
-                      {data.items.some((item) => item.valueMm > 0) && (
-                        <span className="font-mono font-semibold">
-                          最大{' '}
-                          {Math.max(...data.items.map((item) => item.valueMm)).toFixed(1)}mm
+                {categoryEntries.map(([cat, data]) => {
+                  const hasMm = data.items.some((item) => item.valueMm > 0);
+                  return (
+                    <div
+                      key={cat}
+                      className={cn(
+                        'px-2.5 py-2 rounded-md border text-xs',
+                        CATEGORY_COLORS[cat],
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">
+                          {MEASUREMENT_CATEGORY_LABEL[cat]}
                         </span>
+                        <span className="text-[10px] opacity-80">
+                          {data.distanceCount > 0 && `${data.distanceCount}项距离`}
+                          {data.distanceCount > 0 && data.lineCount > 0 && ' + '}
+                          {data.lineCount > 0 && `${data.lineCount}条参考线`}
+                        </span>
+                      </div>
+                      {hasMm && (
+                        <div className="text-[10px] mt-0.5 font-mono">
+                          最大距离：
+                          {Math.max(
+                            ...data.items
+                              .filter((item) => item.type === 'distance')
+                              .map((item) => item.valueMm),
+                          ).toFixed(1)}
+                          mm
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

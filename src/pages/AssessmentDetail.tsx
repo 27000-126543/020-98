@@ -27,11 +27,11 @@ import { AnnotationToolbar } from '@/components/assessment/AnnotationToolbar';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { generateConclusion } from '@/utils/conclusion';
 
-const DEFAULT_CATEGORY_MAP: Record<SectionKey, MeasurementCategory> = {
-  'centric-relation': 'occlusal-plane',
-  'vertical-dimension': 'vertical-overbite',
-  'overjet-overbite': 'horizontal-overjet',
-  deviation: 'midline-deviation',
+const DEFAULT_CATEGORY_MAP: Record<SectionKey, Record<Measurement['type'], MeasurementCategory>> = {
+  'centric-relation': { distance: 'occlusal-plane', 'reference-line': 'occlusal-plane' },
+  'vertical-dimension': { distance: 'vertical-overbite', 'reference-line': 'occlusal-plane' },
+  'overjet-overbite': { distance: 'horizontal-overjet', 'reference-line': 'occlusal-plane' },
+  deviation: { distance: 'midline-deviation', 'reference-line': 'occlusal-plane' },
 };
 
 export const AssessmentDetail = () => {
@@ -175,7 +175,7 @@ export const AssessmentDetail = () => {
     y2: number;
   }) => {
     if (!activeImage) return;
-    const defaultCategory = DEFAULT_CATEGORY_MAP[sectionKey];
+    const defaultCategory = DEFAULT_CATEGORY_MAP[sectionKey][data.type];
     const defaultLabel = data.type === 'distance' ? '距离测量' : '参考线';
     const m = addMeasurement(patient.id, sectionKey, {
       imageId: activeImage.id,

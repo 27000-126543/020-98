@@ -174,7 +174,9 @@ export interface SectionSummary {
     deviations: Array<{ label: string; valueMm: number; direction: string }>;
     byCategory: Partial<Record<MeasurementCategory, {
       count: number;
-      items: Array<{ label: string; valueMm: number; direction: string }>;
+      distanceCount: number;
+      lineCount: number;
+      items: Array<{ label: string; valueMm: number; direction: string; type: string }>;
     }>>;
   };
 }
